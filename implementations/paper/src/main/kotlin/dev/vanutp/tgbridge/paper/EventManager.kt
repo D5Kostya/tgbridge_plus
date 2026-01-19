@@ -98,7 +98,8 @@ class EventManager(private val plugin: PaperBootstrap) : Listener {
                         e.joinMessage(null) // Suppress the default join message
                         plugin.tgbridge.pendingAuthentication.add(player.uniqueId)
                         plugin.tgbridge.coroutineScope.launch {
-                            val isMember = plugin.tgbridge.bot.isUserInGroup(telegramId, ConfigManager.config.auth.groupId)
+                            val groupId = ConfigManager.config.auth.groupId.ifEmpty { ConfigManager.config.getDefaultChat().chatId.toString() }
+                            val isMember = plugin.tgbridge.bot.isUserInGroup(telegramId, groupId)
                             plugin.tgbridge.pendingAuthentication.remove(player.uniqueId)
                             if (!isMember) {
                                 plugin.server.scheduler.runTask(plugin, Runnable {
