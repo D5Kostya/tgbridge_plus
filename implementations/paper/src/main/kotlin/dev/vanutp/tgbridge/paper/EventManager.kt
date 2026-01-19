@@ -89,20 +89,33 @@ class EventManager(private val plugin: PaperBootstrap) : Listener {
 
     private fun registerJoinLeaveListener() {
         plugin.server.pluginManager.registerEvents(object : Listener {
-            @EventHandler(priority = EventPriority.MONITOR)
+            @EventHandler(priority = EventPriority.HIGHEST)
             fun onPlayerJoin(e: PlayerJoinEvent) {
                 if (ConfigManager.config.auth.enabled) {
                     val player = e.player
                     val telegramId = plugin.tgbridge.authStorage.getTelegramId(player.name)
                     if (telegramId != null) {
+                        e.joinMessage(null) // Suppress the default join message
+                        plugin.tgbridge.pendingAuthentication.add(player.uniqueId)
                         plugin.tgbridge.coroutineScope.launch {
                             val isMember = plugin.tgbridge.bot.isUserInGroup(telegramId, ConfigManager.config.auth.groupId)
+                            plugin.tgbridge.pendingAuthentication.remove(player.uniqueId)
                             if (!isMember) {
                                 plugin.server.scheduler.runTask(plugin, Runnable {
                                     player.kick(MiniMessage.miniMessage().deserialize(ConfigManager.lang.auth.notInGroupMessage))
                                 })
+                            } else {
+                                // Manually trigger the join event for tgbridge
+                                plugin.tgbridge.onPlayerJoin(
+                                    TgbridgeJoinEvent(
+                                        player.toTgbridge(),
+                                        player.hasPlayedBefore(),
+                                        e,
+                                    )
+                                )
                             }
                         }
+                        return
                     }
                 }
                 plugin.tgbridge.onPlayerJoin(
@@ -116,6 +129,11 @@ class EventManager(private val plugin: PaperBootstrap) : Listener {
 
             @EventHandler(priority = EventPriority.MONITOR)
             fun onPlayerQuit(e: PlayerQuitEvent) {
+                if (plugin.tgbridge.pendingAuthentication.contains(e.player.uniqueId)) {
+                    e.quitMessage(null) // Suppress the default quit message
+                    plugin.tgbridge.pendingAuthentication.remove(e.player.uniqueId)
+                    return
+                }
                 plugin.tgbridge.onPlayerLeave(TgbridgeLeaveEvent(e.player.toTgbridge(), e))
             }
         }, plugin)

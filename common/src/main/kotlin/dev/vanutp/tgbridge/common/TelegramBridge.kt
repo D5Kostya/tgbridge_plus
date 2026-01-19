@@ -49,6 +49,7 @@ abstract class TelegramBridge {
     lateinit var authStorage: AuthStorage
         private set
     val authCodes = mutableMapOf<String, String>()
+    val pendingAuthentication = mutableSetOf<java.util.UUID>()
 
     fun init() {
         logger.info("tgbridge starting on ${platform.name}")
