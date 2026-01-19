@@ -68,11 +68,18 @@ abstract class TelegramBridge {
         addModule(ReplacementsModule(this))
 //        addModule(VoiceMessagesModule(this))
         coroutineScope.launch {
-            bot.init()
-            logger.info("Logged in as @${bot.me.username}")
-            registerTelegramHandlers()
-            bot.startPolling()
-            initialized.complete(Unit)
+            try {
+                bot.init()
+                logger.info("Logged in as @${bot.me.username}")
+                registerTelegramHandlers()
+                bot.startPolling()
+                initialized.complete(Unit)
+            } catch (e: Exception) {
+                logger.error("!!! FAILED TO INITIALIZE TELEGRAM BOT !!!")
+                logger.error("This is a critical error. The bot will not work.")
+                logger.error("Please check your bot token in config.yml and your server's network connection.")
+                logger.error("Error details: ${e.message}", e)
+            }
         }
     }
 
@@ -137,14 +144,19 @@ abstract class TelegramBridge {
             return
         }
         val text = msg.text ?: return
+        val fromUser = msg.from
+        if (fromUser == null) {
+            logger.error("Received a private message with no sender information: $msg")
+            return
+        }
         val player = authCodes.entries.find { it.value == text }?.key
         if (player != null) {
-            val alreadyLinked = authStorage.getMinecraftUsername(msg.from!!.id)
+            val alreadyLinked = authStorage.getMinecraftUsername(fromUser.id)
             if (alreadyLinked != null) {
                 bot.sendMessage(msg.chat.id, lang.auth.alreadyLinkedMessage.replace("{player}", alreadyLinked))
                 return
             }
-            authStorage.linkPlayer(player, msg.from!!.id)
+            authStorage.linkPlayer(player, fromUser.id)
             authCodes.remove(player)
             bot.sendMessage(msg.chat.id, lang.auth.successMessage)
         } else {
