@@ -470,8 +470,10 @@ class TelegramBot(botApiUrl: String, botToken: String, private val logger: ILogg
     }
 
     suspend fun init() {
-        retriableCall { client.deleteWebhook() }
-        me = retriableCall { client.getMe() }
+        withTimeout(15000) {
+            retriableCall { client.deleteWebhook() }
+            me = retriableCall { client.getMe() }
+        }
     }
 
     fun startPolling() {
