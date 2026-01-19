@@ -49,6 +49,28 @@ data class TgChat(
 )
 
 @Serializable
+enum class TgChatMemberStatus {
+    @SerialName("creator")
+    CREATOR,
+    @SerialName("administrator")
+    ADMINISTRATOR,
+    @SerialName("member")
+    MEMBER,
+    @SerialName("restricted")
+    RESTRICTED,
+    @SerialName("left")
+    LEFT,
+    @SerialName("kicked")
+    KICKED,
+}
+
+@Serializable
+data class TgChatMember(
+    val status: TgChatMemberStatus,
+    val user: TgUser,
+)
+
+@Serializable
 class TgAny
 
 @Serializable
@@ -379,7 +401,7 @@ interface TgApi {
     suspend fun getChatMember(
         @Query("chat_id") chatId: String,
         @Query("user_id") userId: Long,
-    ): TgResponse<TgAny>
+    ): TgResponse<TgChatMember>
 }
 
 const val POLL_TIMEOUT_SECONDS = 60
@@ -715,13 +737,17 @@ class TelegramBot(botApiUrl: String, botToken: String, private val logger: ILogg
 
     suspend fun isUserInGroup(userId: Long, groupId: String): Boolean {
         return try {
-            retriableCall { client.getChatMember(groupId, userId) }
-            true
+            val member = retriableCall { client.getChatMember(groupId, userId) }
+            when (member.status) {
+                TgChatMemberStatus.CREATOR, TgChatMemberStatus.ADMINISTRATOR, TgChatMemberStatus.MEMBER -> true
+                else -> false
+            }
         } catch (e: TelegramException) {
             if (e.responseBody?.contains("user not found") == true) {
                 false
             } else {
-                throw e
+                logger.error("Failed to check chat member status for user $userId in group $groupId", e)
+                false // Or rethrow, depending on desired behavior for API errors
             }
         }
     }

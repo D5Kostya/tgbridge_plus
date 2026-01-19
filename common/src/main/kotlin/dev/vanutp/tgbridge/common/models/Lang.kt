@@ -125,6 +125,8 @@ data class LangAuth(
     val alreadyLinkedMessage: String = "Your Telegram account is already linked to the Minecraft account: {player}. Use /unlink in-game to unlink it.",
     val unlinkSuccess: String = "Your Telegram account has been unlinked.",
     val notLinked: String = "Your Minecraft account is not linked to a Telegram account.",
+    @YamlComment("This message is sent to the group when a player links their account.")
+    val linkSuccessNotification: String = "Player {mc_username} has linked their account to Telegram user {tg_username}.",
 )
 
 @Serializable

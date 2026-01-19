@@ -159,6 +159,10 @@ abstract class TelegramBridge {
             authStorage.linkPlayer(player, fromUser.id)
             authCodes.remove(player)
             bot.sendMessage(msg.chat.id, lang.auth.successMessage)
+            val notificationText = lang.auth.linkSuccessNotification
+                .replace("{mc_username}", player)
+                .replace("{tg_username}", fromUser.username ?: fromUser.firstName)
+            chatManager.sendMessage(config.getDefaultChat(), MessageContentText(notificationText.formatMiniMessage()))
         } else {
             bot.sendMessage(msg.chat.id, lang.auth.invalidCodeMessage)
         }
